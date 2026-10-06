@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Local NL2SQL</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        textarea {
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 8px;
+        }
+
+        select,
+        button {
+            padding: 8px 12px;
+            margin-top: 8px;
+        }
+
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            white-space: pre-wrap;
+            border-radius: 4px;
+        }
+
+        #status {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Local NL2SQL</h1>
+
+    <label for="model">Model:</label>
+    <select id="model">
+        <option value="llama3.2">Llama 3.2</option>
+        <option value="gemma3">Gemma 3</option>
+        <option value="qwen3">Qwen 3</option>
+    </select>
+
+    <br><br>
+
+    <label for="question">Question:</label>
+    <textarea
+        id="question"
+        rows="5"
+        placeholder="Ask a question about the database..."
+    ></textarea>
+
+    <br>
+
+    <button onclick="generateSQL()">Generate SQL</button>
+
+    <div id="status"></div>
+
+    <h3>SQL</h3>
+    <pre id="sql">No SQL generated.</pre>
+
+    <h3>Message</h3>
+    <pre id="message"></pre>
+
+    <script>
+        async function generateSQL() {
+            const question = document.getElementById("question").value.trim();
+            const model = document.getElementById("model").value;
+
+            const status = document.getElementById("status");
+            const sql = document.getElementById("sql");
+            const message = document.getElementById("message");
+
+            if (!question) {
+                status.textContent = "Enter a question.";
+                sql.textContent = "No SQL generated.";
+                message.textContent = "";
+                return;
+            }
+
+            status.textContent = "Generating...";
+            sql.textContent = "";
+            message.textContent = "";
+
+            try {
+                const response = await fetch("/generate-sql", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        question: question,
+                        model: model
+                    })
+                });
+
+                const data = await response.json();
+
+                status.textContent = data.success
+                    ? "Success"
+                    : "Request needs attention";
+
+                sql.textContent = data.sql || "No SQL generated.";
+                message.textContent = data.message || "";
+
+            } catch (error) {
+                status.textContent = "Error";
+                sql.textContent = "No SQL generated.";
+                message.textContent = error.toString();
+            }
+        }
+    </script>
+</body>
+</html>
