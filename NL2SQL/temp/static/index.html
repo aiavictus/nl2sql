@@ -1,0 +1,577 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local NL2SQL</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        :root {
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+                BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: #172033;
+            background: #f5f7fb;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, #e8eefc 0, transparent 34%),
+                #f5f7fb;
+        }
+
+        .app {
+            width: min(1180px, calc(100% - 32px));
+            margin: auto;
+            padding: 42px 0;
+        }
+
+        header {
+            margin-bottom: 26px;
+        }
+
+        .eyebrow {
+            margin: 0 0 7px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(30px, 5vw, 44px);
+            letter-spacing: -.04em;
+        }
+
+        .subtitle {
+            margin: 9px 0 0;
+            color: #64748b;
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(255,255,255,.94);
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
+            box-shadow: 0 12px 35px rgba(15,23,42,.07);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 19px 21px 11px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            margin: 0;
+            font-size: 15px;
+        }
+
+        .card-body {
+            padding: 10px 21px 21px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 7px;
+            font-size: 12px;
+            font-weight: 800;
+            color: #475569;
+        }
+
+        select,
+        textarea {
+            width: 100%;
+            border: 1px solid #d7dee9;
+            border-radius: 11px;
+            background: #fff;
+            color: #172033;
+            font: inherit;
+            outline: none;
+        }
+
+        select {
+            height: 44px;
+            padding: 0 11px;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 180px;
+            padding: 13px;
+            line-height: 1.5;
+        }
+
+        select:focus,
+        textarea:focus {
+            border-color: #64748b;
+            box-shadow: 0 0 0 3px rgba(100,116,139,.12);
+        }
+
+        .field {
+            margin-bottom: 17px;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 9px;
+        }
+
+        button {
+            border: 0;
+            border-radius: 10px;
+            padding: 10px 15px;
+            font: inherit;
+            font-weight: 750;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+
+        .primary {
+            color: white;
+            background: #172033;
+        }
+
+        .secondary {
+            color: #334155;
+            background: #eef2f7;
+        }
+
+        .success {
+            color: white;
+            background: #166534;
+        }
+
+        .status {
+            margin-top: 15px;
+            padding: 10px 12px;
+            border-radius: 9px;
+            background: #f1f5f9;
+            color: #475569;
+            font-size: 12px;
+        }
+
+        .status.success {
+            color: #166534;
+            background: #f0fdf4;
+        }
+
+        .status.error {
+            color: #991b1b;
+            background: #fef2f2;
+        }
+
+        .sql-editor {
+            min-height: 220px;
+            font-family: "Cascadia Code", Consolas, monospace;
+            font-size: 13px;
+            background: #111827;
+            color: #e5e7eb;
+            border-color: #111827;
+        }
+
+        .sql-editor:focus {
+            border-color: #64748b;
+        }
+
+        .result-card {
+            margin-top: 20px;
+        }
+
+        .result-meta {
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .table-wrapper {
+            overflow: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 11px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 500px;
+            font-size: 13px;
+        }
+
+        th,
+        td {
+            padding: 11px 13px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+            white-space: nowrap;
+        }
+
+        th {
+            background: #f8fafc;
+            color: #475569;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+
+        tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .empty {
+            padding: 28px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        footer {
+            margin-top: 17px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 12px;
+        }
+
+        @media (max-width: 850px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .app {
+                padding: 28px 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<main class="app">
+
+    <header>
+        <p class="eyebrow">Offline · Local · Read Only</p>
+        <h1>Natural Language → SQL</h1>
+        <p class="subtitle">
+            Generate, review, and run safe read-only queries against your local database.
+        </p>
+    </header>
+
+    <section class="workspace">
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Ask your database</h2>
+            </div>
+
+            <div class="card-body">
+
+                <div class="field">
+                    <label for="model">MODEL</label>
+                    <select id="model">
+                        <option value="gemma3">Gemma 3 · 4B</option>
+                        <option value="llama3.2">Llama 3.2 · 3B</option>
+                        <option value="qwen3">Qwen 3 · 4B</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="question">QUESTION</label>
+                    <textarea
+                        id="question"
+                        placeholder="Example: Show customer names with their total order amount."
+                    ></textarea>
+                </div>
+
+                <div class="actions">
+                    <button class="primary" id="generate">
+                        Generate SQL
+                    </button>
+
+                    <button class="secondary" id="clear">
+                        Clear
+                    </button>
+                </div>
+
+                <div id="status" class="status">
+                    Ready.
+                </div>
+
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">SQL</h2>
+
+                <button class="secondary" id="copy" disabled>
+                    Copy
+                </button>
+            </div>
+
+            <div class="card-body">
+
+                <textarea
+                    id="sql"
+                    class="sql-editor"
+                    placeholder="Generated SQL will appear here. You can review or edit it before running."
+                ></textarea>
+
+                <div class="actions" style="margin-top: 12px;">
+                    <button class="success" id="run" disabled>
+                        Run SQL
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+    </section>
+
+    <section class="card result-card">
+
+        <div class="card-header">
+            <h2 class="card-title">Query Results</h2>
+            <span class="result-meta" id="resultMeta"></span>
+        </div>
+
+        <div class="card-body">
+            <div id="results">
+                <div class="empty">
+                    Run a SELECT query to display results here.
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <footer>
+        Local SQL generation and read-only database access.
+    </footer>
+
+</main>
+
+<script>
+    const model = document.getElementById("model");
+    const question = document.getElementById("question");
+    const generate = document.getElementById("generate");
+    const clear = document.getElementById("clear");
+    const sql = document.getElementById("sql");
+    const copy = document.getElementById("copy");
+    const run = document.getElementById("run");
+    const status = document.getElementById("status");
+    const results = document.getElementById("results");
+    const resultMeta = document.getElementById("resultMeta");
+
+    function setStatus(message, type = "") {
+        status.textContent = message;
+        status.className = "status" + (type ? ` ${type}` : "");
+    }
+
+    function clearResults() {
+        results.innerHTML = `
+            <div class="empty">
+                Run a SELECT query to display results here.
+            </div>
+        `;
+        resultMeta.textContent = "";
+    }
+
+    function renderResults(data) {
+        resultMeta.textContent = `${data.row_count} row${data.row_count === 1 ? "" : "s"}`;
+
+        if (!data.rows.length) {
+            results.innerHTML = `
+                <div class="empty">
+                    Query executed successfully, but returned no rows.
+                </div>
+            `;
+            return;
+        }
+
+        const table = document.createElement("table");
+
+        const header = document.createElement("thead");
+        const headerRow = document.createElement("tr");
+
+        data.columns.forEach(column => {
+            const th = document.createElement("th");
+            th.textContent = column;
+            headerRow.appendChild(th);
+        });
+
+        header.appendChild(headerRow);
+        table.appendChild(header);
+
+        const body = document.createElement("tbody");
+
+        data.rows.forEach(row => {
+            const tr = document.createElement("tr");
+
+            data.columns.forEach(column => {
+                const td = document.createElement("td");
+                const value = row[column];
+
+                td.textContent =
+                    value === null || value === undefined
+                        ? ""
+                        : String(value);
+
+                tr.appendChild(td);
+            });
+
+            body.appendChild(tr);
+        });
+
+        table.appendChild(body);
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "table-wrapper";
+        wrapper.appendChild(table);
+
+        results.innerHTML = "";
+        results.appendChild(wrapper);
+    }
+
+    generate.addEventListener("click", async () => {
+        const text = question.value.trim();
+
+        if (!text) {
+            setStatus("Please enter a question.", "error");
+            question.focus();
+            return;
+        }
+
+        generate.disabled = true;
+        generate.textContent = "Generating...";
+        setStatus("Generating SQL locally.");
+
+        try {
+            const response = await fetch("/generate-sql", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    question: text,
+                    model: model.value
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.sql) {
+                sql.value = data.sql;
+                copy.disabled = false;
+                run.disabled = false;
+                setStatus("SQL generated. Review it before running.", "success");
+            } else {
+                sql.value = "";
+                copy.disabled = true;
+                run.disabled = true;
+                setStatus(data.message || "SQL generation failed.", "error");
+            }
+
+        } catch {
+            setStatus("Unable to connect to the local API.", "error");
+        } finally {
+            generate.disabled = false;
+            generate.textContent = "Generate SQL";
+        }
+    });
+
+    run.addEventListener("click", async () => {
+        const query = sql.value.trim();
+
+        if (!query) {
+            setStatus("There is no SQL query to run.", "error");
+            return;
+        }
+
+        run.disabled = true;
+        run.textContent = "Running...";
+        setStatus("Executing read-only query.");
+
+        try {
+            const response = await fetch("/execute-sql", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    sql: query
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                renderResults(data);
+                setStatus(data.message, "success");
+            } else {
+                clearResults();
+                setStatus(data.message || "Query failed.", "error");
+            }
+
+        } catch {
+            clearResults();
+            setStatus("Unable to connect to the local database API.", "error");
+        } finally {
+            run.disabled = false;
+            run.textContent = "Run SQL";
+        }
+    });
+
+    copy.addEventListener("click", async () => {
+        if (!sql.value.trim()) {
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(sql.value);
+            copy.textContent = "Copied";
+
+            setTimeout(() => {
+                copy.textContent = "Copy";
+            }, 1200);
+
+        } catch {
+            setStatus("Copy failed. Copy the SQL manually.", "error");
+        }
+    });
+
+    clear.addEventListener("click", () => {
+        question.value = "";
+        sql.value = "";
+        copy.disabled = true;
+        run.disabled = true;
+        clearResults();
+        setStatus("Ready.");
+        question.focus();
+    });
+
+    question.addEventListener("keydown", event => {
+        if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+            generate.click();
+        }
+    });
+</script>
+
+</body>
+</html>
